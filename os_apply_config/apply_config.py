@@ -68,7 +68,8 @@ CONTROL_FILE_SUFFIX = ".oac"
 
 class OacFile(object):
     DEFAULTS = {
-        'allow_empty': True
+        'allow_empty': True,
+        'stateful_path': False
     }
 
     def __init__(self, body, **kwargs):
@@ -117,6 +118,20 @@ class OacFile(object):
         self._allow_empty = value
         return self
 
+    @property
+    def stateful_path(self):
+        """If True, the file's path will be prefixed with the value of the
+        environment variable $STATEFUL_PATH.
+        """
+        return self._stateful_path
+
+    @stateful_path.setter
+    def stateful_path(self, value):
+        if type(value) is not bool:
+            raise exc.ConfigException(
+                "stateful_path requires Boolean, got: '%s'" % value)
+        self._stateful_path = value
+        return self
 
 def install_config(
         config_path, template_root, output_path, validate, subhash=None,
@@ -156,6 +171,11 @@ def write_file(path, obj):
         else:
             logger.info("not creating empty %s", path)
         return
+
+    if obj.stateful_path:
+        path = os.path.join(
+            os.environ.get("STATEFUL_PATH", "/mnt/state"),
+            path.strip("/"))
 
     logger.info("writing %s", path)
     if os.path.exists(path):
